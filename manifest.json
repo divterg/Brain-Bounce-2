@@ -1,0 +1,25 @@
+{
+  "name": "8D Brain Bounce",
+  "short_name": "Brain Bounce",
+  "description": "Premium bilateral 8D audio for headphones. Moves sound left and right between your ears.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#070a1a",
+  "theme_color": "#0a0f2c",
+  "icons": [
+    {
+      "src": "./icons/icon-512.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

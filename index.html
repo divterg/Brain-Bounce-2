@@ -1,0 +1,761 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
+    <title>8D Brain Bounce</title>
+    <meta name="description" content="Premium bilateral 8D audio for headphones." />
+
+    <!-- PWA -->
+    <link rel="manifest" href="./manifest.json" />
+    <meta name="theme-color" content="#0a0f2c" />
+
+    <!-- Apple / iPhone PWA -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Brain Bounce" />
+    <link rel="apple-touch-icon" href="./icons/icon-512.png" />
+    <link rel="icon" type="image/png" href="./icons/icon-512.png" />
+
+    <style>
+      :root {
+        --bg: #070a1a;
+        --panel: rgba(255, 255, 255, 0.055);
+        --panel-border: rgba(255, 255, 255, 0.12);
+        --violet: #a855f7;
+        --blue: #3b82f6;
+        --pink: #ec4899;
+        --cyan: #22d3ee;
+        --text: #eef1ff;
+        --muted: #9aa3c7;
+      }
+      * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+      html, body {
+        margin: 0; padding: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        overscroll-behavior: none;
+      }
+      body {
+        min-height: 100vh;
+        background:
+          radial-gradient(1000px 700px at 15% -5%, rgba(168,85,247,0.28), transparent 60%),
+          radial-gradient(900px 700px at 100% 0%, rgba(59,130,246,0.24), transparent 55%),
+          radial-gradient(1000px 800px at 50% 115%, rgba(236,72,153,0.22), transparent 60%),
+          var(--bg);
+      }
+      .app {
+        max-width: 520px;
+        margin: 0 auto;
+        padding: calc(env(safe-area-inset-top) + 18px) 16px calc(env(safe-area-inset-bottom) + 26px);
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+      .header { text-align: center; margin-top: 4px; }
+      .title {
+        font-size: 30px; font-weight: 800; letter-spacing: -0.5px; margin: 0;
+        background: linear-gradient(90deg, var(--violet), var(--cyan), var(--pink));
+        -webkit-background-clip: text; background-clip: text; color: transparent;
+      }
+      .subtitle { margin: 6px 0 0; font-size: 13px; color: var(--muted); letter-spacing: 0.3px; }
+
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--panel-border);
+        border-radius: 22px;
+        padding: 18px;
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
+        box-shadow: 0 12px 40px rgba(0,0,0,0.35);
+      }
+      .panel h2 {
+        font-size: 12px; text-transform: uppercase; letter-spacing: 1.4px;
+        color: var(--muted); margin: 0 0 12px; font-weight: 700;
+      }
+
+      /* Ears + meters */
+      .ears {
+        display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px;
+      }
+      .ear {
+        display: flex; flex-direction: column; align-items: center; gap: 10px;
+      }
+      .ear-orb {
+        width: 82px; height: 82px; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 34px; font-weight: 800;
+        border: 1.5px solid rgba(255,255,255,0.16);
+        transition: transform 0.06s linear;
+        position: relative;
+      }
+      .ear-L .ear-orb { background: radial-gradient(circle at 35% 30%, rgba(168,85,247,0.55), rgba(168,85,247,0.05)); }
+      .ear-R .ear-orb { background: radial-gradient(circle at 35% 30%, rgba(236,72,153,0.55), rgba(236,72,153,0.05)); }
+      .ear-label { font-size: 12px; color: var(--muted); letter-spacing: 2px; }
+      .center-wave { font-size: 26px; opacity: 0.7; }
+
+      .meter {
+        width: 100%; height: 12px; border-radius: 8px;
+        background: rgba(255,255,255,0.07); overflow: hidden; margin-top: 2px;
+        border: 1px solid rgba(255,255,255,0.08);
+      }
+      .meter-fill { height: 100%; width: 0%; border-radius: 8px; transition: width 0.05s linear; }
+      .meter-L .meter-fill { background: linear-gradient(90deg, #7c3aed, var(--violet)); }
+      .meter-R .meter-fill { background: linear-gradient(90deg, #db2777, var(--pink)); }
+
+      /* Visualizer */
+      canvas#viz { width: 100%; height: 110px; display: block; border-radius: 14px; background: rgba(0,0,0,0.25); }
+
+      /* Play button */
+      .play-wrap { display: flex; justify-content: center; margin: 4px 0 2px; }
+      .play-btn {
+        width: 128px; height: 128px; border-radius: 50%;
+        border: none; cursor: pointer; color: #fff;
+        font-size: 46px; display: flex; align-items: center; justify-content: center;
+        background: linear-gradient(135deg, var(--violet), var(--blue) 55%, var(--pink));
+        box-shadow: 0 0 40px rgba(168,85,247,0.55), inset 0 0 22px rgba(255,255,255,0.18);
+        transition: transform 0.12s ease, box-shadow 0.2s ease;
+        position: relative;
+      }
+      .play-btn:active { transform: scale(0.94); }
+      .play-btn.playing { animation: pulseGlow 1.6s ease-in-out infinite; }
+      @keyframes pulseGlow {
+        0%,100% { box-shadow: 0 0 30px rgba(168,85,247,0.45), inset 0 0 22px rgba(255,255,255,0.16); }
+        50% { box-shadow: 0 0 60px rgba(236,72,153,0.65), inset 0 0 26px rgba(255,255,255,0.22); }
+      }
+
+      /* Sound grid */
+      .sound-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+      .sound-btn {
+        padding: 14px 10px; border-radius: 16px; cursor: pointer;
+        background: rgba(255,255,255,0.05); color: var(--text);
+        border: 1px solid rgba(255,255,255,0.1); font-size: 14px; font-weight: 600;
+        display: flex; flex-direction: column; align-items: center; gap: 6px;
+        transition: all 0.15s ease;
+      }
+      .sound-btn .emoji { font-size: 22px; }
+      .sound-btn.active {
+        border-color: transparent;
+        background: linear-gradient(135deg, rgba(168,85,247,0.35), rgba(59,130,246,0.35));
+        box-shadow: 0 0 22px rgba(168,85,247,0.4);
+      }
+
+      /* Sliders */
+      .control { margin-bottom: 16px; }
+      .control:last-child { margin-bottom: 0; }
+      .control-head { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; }
+      .control-head .val { color: var(--cyan); font-weight: 700; font-variant-numeric: tabular-nums; }
+      input[type="range"] {
+        -webkit-appearance: none; appearance: none; width: 100%; height: 8px; border-radius: 8px;
+        background: rgba(255,255,255,0.12); outline: none;
+      }
+      input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none; appearance: none; width: 26px; height: 26px; border-radius: 50%;
+        background: linear-gradient(135deg, var(--violet), var(--pink));
+        box-shadow: 0 0 12px rgba(236,72,153,0.7); cursor: pointer; border: 2px solid #fff;
+      }
+
+      /* Upload + mic */
+      .action-row { display: flex; gap: 10px; }
+      .action-btn {
+        flex: 1; padding: 14px; border-radius: 16px; cursor: pointer; font-size: 14px; font-weight: 600;
+        border: 1px solid rgba(255,255,255,0.14); color: var(--text);
+        background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; gap: 8px;
+        transition: all 0.15s ease;
+      }
+      .action-btn.active { background: linear-gradient(135deg, rgba(34,211,238,0.3), rgba(59,130,246,0.3)); border-color: transparent; box-shadow: 0 0 18px rgba(34,211,238,0.35); }
+      .file-name { font-size: 12px; color: var(--muted); margin-top: 10px; text-align: center; word-break: break-all; }
+      .upload-play { margin-top: 12px; width: 100%; padding: 13px; border-radius: 14px; font-weight: 700; font-size: 15px;
+        border: none; cursor: pointer; color: #fff; background: linear-gradient(135deg, var(--blue), var(--violet));
+        opacity: 0.5; pointer-events: none; transition: opacity 0.2s; }
+      .upload-play.ready { opacity: 1; pointer-events: auto; }
+
+      .safety { font-size: 12px; color: var(--muted); line-height: 1.7; }
+      .safety strong { color: #ffd7e6; }
+      .version { text-align: center; font-size: 12px; color: var(--muted); letter-spacing: 1px; padding-top: 4px; }
+      .toast {
+        position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 20px); transform: translateX(-50%);
+        background: rgba(20,24,52,0.95); border: 1px solid var(--panel-border); color: #fff;
+        padding: 12px 18px; border-radius: 14px; font-size: 13px; z-index: 50; max-width: 90%;
+        opacity: 0; pointer-events: none; transition: opacity 0.25s; text-align: center;
+      }
+      .toast.show { opacity: 1; }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <div class="header">
+        <h1 class="title">8D Brain Bounce</h1>
+        <p class="subtitle">🎧 Bilateral audio · use stereo headphones</p>
+      </div>
+
+      <!-- Ears + meters -->
+      <div class="panel">
+        <div class="ears">
+          <div class="ear ear-L">
+            <div class="ear-orb" id="orbL">L</div>
+            <div class="ear-label">LEFT</div>
+            <div class="meter meter-L"><div class="meter-fill" id="meterL"></div></div>
+          </div>
+          <div class="center-wave">〰️</div>
+          <div class="ear ear-R">
+            <div class="ear-orb" id="orbR">R</div>
+            <div class="ear-label">RIGHT</div>
+            <div class="meter meter-R"><div class="meter-fill" id="meterR"></div></div>
+          </div>
+        </div>
+        <canvas id="viz" style="margin-top:16px"></canvas>
+      </div>
+
+      <!-- Play -->
+      <div class="play-wrap">
+        <button class="play-btn" id="playBtn" aria-label="Play or Pause">▶</button>
+      </div>
+
+      <!-- Sounds -->
+      <div class="panel">
+        <h2>Sound Source</h2>
+        <div class="sound-grid" id="soundGrid"></div>
+      </div>
+
+      <!-- Controls -->
+      <div class="panel">
+        <h2>Bounce Controls</h2>
+        <div class="control">
+          <div class="control-head"><span>Bounce Speed</span><span class="val" id="speedVal">1.5s</span></div>
+          <input type="range" id="speed" min="0.5" max="8" step="0.1" value="1.5" />
+        </div>
+        <div class="control">
+          <div class="control-head"><span>Bounce Depth</span><span class="val" id="depthVal">100%</span></div>
+          <input type="range" id="depth" min="0" max="100" step="1" value="100" />
+        </div>
+        <div class="control">
+          <div class="control-head"><span>Volume</span><span class="val" id="volVal">60%</span></div>
+          <input type="range" id="vol" min="0" max="100" step="1" value="60" />
+        </div>
+      </div>
+
+      <!-- Upload + Mic -->
+      <div class="panel">
+        <h2>Your Audio</h2>
+        <div class="action-row">
+          <label class="action-btn" for="fileInput">📂 Upload Audio</label>
+          <input type="file" id="fileInput" accept="audio/*,video/*" style="display:none" />
+          <button class="action-btn" id="micBtn">🎙️ Mic Pass-through</button>
+        </div>
+        <div class="file-name" id="fileName"></div>
+        <button class="upload-play" id="uploadPlay">▶ Play Uploaded Audio</button>
+      </div>
+
+      <!-- Safety -->
+      <div class="panel safety">
+        <h2>Safety</h2>
+        • <strong>Use stereo headphones</strong> for the effect.<br />
+        • Keep volume at a safe, comfortable level.<br />
+        • Stop if you feel dizzy, uncomfortable, or overstimulated.<br />
+        • This is <strong>not a medical device</strong> and does not diagnose, treat, or cure any condition.
+      </div>
+
+      <div class="version">Version 4.0</div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+      "use strict";
+
+      /* ---------- State ---------- */
+      var ctx = null;
+      var playing = false;
+      var currentSource = "drone"; // built-in id | "upload" | "mic"
+      var wakeLock = null;
+
+      // graph nodes
+      var masterGain = null, leftGain = null, rightGain = null, merger = null, analyser = null;
+      var sourceNodes = []; // oscillators / buffer source / mic source to disconnect on stop
+      var lfoStartTime = 0;
+      var animId = null;
+
+      // upload
+      var uploadBuffer = null;
+      var uploadFileName = "";
+      var micStream = null;
+
+      var els = {
+        playBtn: document.getElementById("playBtn"),
+        orbL: document.getElementById("orbL"),
+        orbR: document.getElementById("orbR"),
+        meterL: document.getElementById("meterL"),
+        meterR: document.getElementById("meterR"),
+        viz: document.getElementById("viz"),
+        speed: document.getElementById("speed"),
+        depth: document.getElementById("depth"),
+        vol: document.getElementById("vol"),
+        speedVal: document.getElementById("speedVal"),
+        depthVal: document.getElementById("depthVal"),
+        volVal: document.getElementById("volVal"),
+        soundGrid: document.getElementById("soundGrid"),
+        fileInput: document.getElementById("fileInput"),
+        fileName: document.getElementById("fileName"),
+        uploadPlay: document.getElementById("uploadPlay"),
+        micBtn: document.getElementById("micBtn"),
+        toast: document.getElementById("toast")
+      };
+
+      /* ---------- Built-in sounds ---------- */
+      // Each returns array of oscillators to be routed into a single passed-in destination gain.
+      var SOUNDS = [
+        { id: "drone",  name: "Deep Drone",   emoji: "🌊" },
+        { id: "pad",    name: "Ambient Pad",  emoji: "☁️" },
+        { id: "crystal",name: "Crystal Tone", emoji: "💎" },
+        { id: "pulse",  name: "Pulse Tone",   emoji: "🔵" },
+        { id: "theta",  name: "Theta Wave",   emoji: "🧠" },
+        { id: "alpha",  name: "Alpha Tone",   emoji: "✨" }
+      ];
+
+      function buildSoundGrid() {
+        SOUNDS.forEach(function (s) {
+          var b = document.createElement("button");
+          b.className = "sound-btn" + (s.id === currentSource ? " active" : "");
+          b.dataset.id = s.id;
+          b.innerHTML = '<span class="emoji">' + s.emoji + "</span>" + s.name;
+          b.addEventListener("click", function () { selectSource(s.id); });
+          els.soundGrid.appendChild(b);
+        });
+      }
+
+      function markActiveSound() {
+        Array.prototype.forEach.call(els.soundGrid.children, function (b) {
+          b.classList.toggle("active", b.dataset.id === currentSource);
+        });
+        els.micBtn.classList.toggle("active", currentSource === "mic");
+      }
+
+      function selectSource(id) {
+        currentSource = id;
+        markActiveSound();
+        if (playing) { restartGraph(); }
+      }
+
+      /* ---------- Audio graph ---------- */
+      function ensureCtx() {
+        if (!ctx) {
+          var AC = window.AudioContext || window.webkitAudioContext;
+          ctx = new AC();
+        }
+        return ctx;
+      }
+
+      function buildBaseGraph() {
+        masterGain = ctx.createGain();
+        leftGain = ctx.createGain();
+        rightGain = ctx.createGain();
+        merger = ctx.createChannelMerger(2);
+        analyser = ctx.createAnalyser();
+        analyser.fftSize = 128;
+
+        // requirement: separate L/R gains -> ChannelMerger for obvious bounce
+        leftGain.connect(merger, 0, 0);
+        rightGain.connect(merger, 0, 1);
+        merger.connect(masterGain);
+        masterGain.connect(analyser);
+        analyser.connect(ctx.destination);
+
+        var v = parseInt(els.vol.value, 10) / 100;
+        masterGain.gain.value = v;
+
+        leftGain.gain.value = 0.0001;
+        rightGain.gain.value = 0.0001;
+      }
+
+      // Build the mono source feeding into both L and R gains.
+      function buildSourceInto(destGain) {
+        // destGain will be connected to both leftGain & rightGain paths.
+        // We create a "monoSum" gain that source connects to; monoSum connects to leftGain & rightGain.
+        var t = ctx.currentTime;
+
+        function osc(type, freq, gain) {
+          var o = ctx.createOscillator();
+          o.type = type; o.frequency.value = freq;
+          var g = ctx.createGain(); g.gain.value = gain;
+          o.connect(g); g.connect(destGain);
+          o.start(t);
+          sourceNodes.push(o, g);
+          return o;
+        }
+
+        switch (currentSource) {
+          case "drone":
+            osc("sine", 70, 0.5);
+            osc("sine", 105, 0.28);
+            osc("triangle", 140, 0.12);
+            break;
+          case "pad":
+            osc("sawtooth", 196, 0.10);
+            osc("sawtooth", 261.63, 0.10);
+            osc("sine", 392, 0.10);
+            osc("sine", 523.25, 0.07);
+            break;
+          case "crystal":
+            osc("sine", 880, 0.22);
+            osc("sine", 1320, 0.12);
+            osc("triangle", 1760, 0.07);
+            break;
+          case "pulse":
+            // handled separately below for a clean rhythmic tone
+            break;
+          case "theta":
+            // theta binaural-style: base + ~6Hz offset, but routed mono here (bounce provides spatial)
+            osc("sine", 200, 0.4);
+            osc("sine", 206, 0.4);
+            break;
+          case "alpha":
+            osc("sine", 300, 0.4);
+            osc("sine", 310, 0.4);
+            break;
+        }
+
+        if (currentSource === "pulse") {
+          // dedicated pulse build for a clean rhythmic tone
+          var carrier = ctx.createOscillator(); carrier.type = "sine"; carrier.frequency.value = 220;
+          var amp = ctx.createGain(); amp.gain.value = 0.12;
+          var lfo2 = ctx.createOscillator(); lfo2.type = "square"; lfo2.frequency.value = 2.4;
+          var lfoAmt = ctx.createGain(); lfoAmt.gain.value = 0.18;
+          lfo2.connect(lfoAmt); lfoAmt.connect(amp.gain);
+          carrier.connect(amp); amp.connect(destGain);
+          carrier.start(t); lfo2.start(t);
+          sourceNodes.push(carrier, amp, lfo2, lfoAmt);
+        }
+      }
+
+      function buildUploadInto(destGain) {
+        var src = ctx.createBufferSource();
+        src.buffer = uploadBuffer;
+        src.loop = true;
+        src.connect(destGain);
+        src.start(0);
+        sourceNodes.push(src);
+      }
+
+      function connectMicInto(destGain) {
+        var src = ctx.createMediaStreamSource(micStream);
+        src.connect(destGain);
+        sourceNodes.push(src);
+      }
+
+      // Sets up the L/R bounce using scheduled LFO-like gain automation.
+      // We implement bounce with two oscillators (LFOs) modulating leftGain & rightGain
+      // in opposite phase, driven by Bounce Speed & Depth.
+      var bounceL = null, bounceR = null, bounceLamt = null, bounceRamt = null, bounceBaseL = null, bounceBaseR = null;
+
+      function startBounce() {
+        var speed = parseFloat(els.speed.value);       // seconds per full cycle
+        var freq = 1 / speed;                            // Hz
+        var depth = parseInt(els.depth.value, 10) / 100; // 0..1
+
+        // base gain so that at depth 0 both are ~0.5 (centered)
+        // gain = base + amt * lfo, where lfo in [-1,1]
+        // At depth 1: L swings 0..1, R swings 1..0 (opposite phase)
+        var base = 0.5;
+        var amt = 0.5 * depth;
+
+        bounceBaseL = ctx.createConstantSource(); bounceBaseL.offset.value = base;
+        bounceBaseR = ctx.createConstantSource(); bounceBaseR.offset.value = base;
+
+        bounceL = ctx.createOscillator(); bounceL.type = "sine"; bounceL.frequency.value = freq;
+        bounceR = ctx.createOscillator(); bounceR.type = "sine"; bounceR.frequency.value = freq;
+
+        bounceLamt = ctx.createGain(); bounceLamt.gain.value = amt;
+        bounceRamt = ctx.createGain(); bounceRamt.gain.value = -amt; // opposite phase
+
+        // set L gain from base value
+        leftGain.gain.value = base;
+        rightGain.gain.value = base;
+
+        bounceBaseL.connect(leftGain.gain);
+        bounceL.connect(bounceLamt); bounceLamt.connect(leftGain.gain);
+        // Note: constant source already sets baseline; but gain.value + connections sum.
+        // To avoid double base, set gain.value to 0 and rely on constant source.
+        leftGain.gain.value = 0;
+        rightGain.gain.value = 0;
+
+        bounceBaseR.connect(rightGain.gain);
+        bounceR.connect(bounceRamt); bounceRamt.connect(rightGain.gain);
+
+        var t = ctx.currentTime + 0.02;
+        bounceBaseL.start(t); bounceBaseR.start(t);
+        bounceL.start(t); bounceR.start(t);
+        lfoStartTime = t;
+
+        sourceNodes.push(bounceBaseL, bounceBaseR, bounceL, bounceR, bounceLamt, bounceRamt);
+      }
+
+      function updateBounceParams() {
+        if (!playing || !bounceL) return;
+        var speed = parseFloat(els.speed.value);
+        var freq = 1 / speed;
+        var depth = parseInt(els.depth.value, 10) / 100;
+        var amt = 0.5 * depth;
+        var t = ctx.currentTime;
+        bounceL.frequency.setValueAtTime(freq, t);
+        bounceR.frequency.setValueAtTime(freq, t);
+        bounceLamt.gain.setValueAtTime(amt, t);
+        bounceRamt.gain.setValueAtTime(-amt, t);
+      }
+
+      /* ---------- Play / Stop ---------- */
+      function buildAndStart() {
+        buildBaseGraph();
+
+        // monoSum gain node that all sources feed into, then split to L & R gains
+        var monoSum = ctx.createGain(); monoSum.gain.value = 1;
+        monoSum.connect(leftGain);
+        monoSum.connect(rightGain);
+        sourceNodes.push(monoSum);
+
+        if (currentSource === "upload") {
+          if (!uploadBuffer) { toast("Upload an audio file first"); return false; }
+          buildUploadInto(monoSum);
+        } else if (currentSource === "mic") {
+          if (!micStream) { toast("Grant mic access first"); return false; }
+          connectMicInto(monoSum);
+        } else {
+          buildSourceInto(monoSum);
+        }
+
+        startBounce();
+        return true;
+      }
+
+      function startPlayback() {
+        ensureCtx();
+        if (ctx.state === "suspended") ctx.resume();
+
+        var ok = buildAndStart();
+        if (!ok) { teardownGraph(); return; }
+
+        playing = true;
+        els.playBtn.textContent = "❚❚";
+        els.playBtn.classList.add("playing");
+        requestWakeLock();
+        startVisualLoop();
+      }
+
+      function stopPlayback() {
+        playing = false;
+        els.playBtn.textContent = "▶";
+        els.playBtn.classList.remove("playing");
+        teardownGraph();
+        stopVisualLoop();
+        releaseWakeLock();
+        stopMic();
+        resetMeters();
+      }
+
+      function teardownGraph() {
+        sourceNodes.forEach(function (n) {
+          try { if (n.stop) n.stop(); } catch (e) {}
+          try { n.disconnect(); } catch (e) {}
+        });
+        sourceNodes = [];
+        [leftGain, rightGain, merger, masterGain, analyser].forEach(function (n) {
+          if (n) { try { n.disconnect(); } catch (e) {} }
+        });
+        leftGain = rightGain = merger = masterGain = analyser = null;
+        bounceL = bounceR = null;
+      }
+
+      function restartGraph() {
+        teardownGraph();
+        buildAndStart();
+      }
+
+      function togglePlay() {
+        if (playing) stopPlayback(); else startPlayback();
+      }
+
+      /* ---------- Mic ---------- */
+      function stopMic() {
+        if (micStream) {
+          micStream.getTracks().forEach(function (t) { t.stop(); });
+          micStream = null;
+        }
+      }
+
+      els.micBtn.addEventListener("click", function () {
+        // request mic ONLY on tap
+        ensureCtx();
+        if (ctx.state === "suspended") ctx.resume();
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          toast("Microphone not supported");
+          return;
+        }
+        navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false } })
+          .then(function (stream) {
+            micStream = stream;
+            selectSource("mic");
+            toast("Mic ready — press Play");
+            if (playing) restartGraph();
+          })
+          .catch(function () { toast("Microphone permission denied"); });
+      });
+
+      /* ---------- Upload ---------- */
+      els.fileInput.addEventListener("change", function (e) {
+        var file = e.target.files && e.target.files[0];
+        if (!file) return;
+        uploadFileName = file.name;
+        els.fileName.textContent = "📄 " + file.name;
+        ensureCtx();
+        var reader = new FileReader();
+        reader.onload = function () {
+          ctx.decodeAudioData(reader.result)
+            .then(function (buf) {
+              uploadBuffer = buf;
+              els.uploadPlay.classList.add("ready");
+              currentSource = "upload";
+              markActiveSound();
+              toast("Loaded — press Play to bounce it");
+            })
+            .catch(function () { toast("Could not decode this file"); });
+        };
+        reader.readAsArrayBuffer(file);
+      });
+
+      els.uploadPlay.addEventListener("click", function () {
+        if (!uploadBuffer) return;
+        currentSource = "upload";
+        markActiveSound();
+        if (!playing) startPlayback(); else restartGraph();
+      });
+
+      /* ---------- Controls ---------- */
+      els.speed.addEventListener("input", function () {
+        els.speedVal.textContent = parseFloat(els.speed.value).toFixed(1) + "s";
+        updateBounceParams();
+      });
+      els.depth.addEventListener("input", function () {
+        els.depthVal.textContent = els.depth.value + "%";
+        updateBounceParams();
+      });
+      els.vol.addEventListener("input", function () {
+        els.volVal.textContent = els.vol.value + "%";
+        if (masterGain) masterGain.gain.value = parseInt(els.vol.value, 10) / 100;
+      });
+
+      els.playBtn.addEventListener("click", togglePlay);
+
+      /* ---------- Visuals ---------- */
+      var vizCtx = els.viz.getContext("2d");
+      function sizeCanvas() {
+        var dpr = window.devicePixelRatio || 1;
+        var rect = els.viz.getBoundingClientRect();
+        els.viz.width = rect.width * dpr;
+        els.viz.height = rect.height * dpr;
+        vizCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+      window.addEventListener("resize", sizeCanvas);
+
+      function startVisualLoop() {
+        sizeCanvas();
+        var freqData = new Uint8Array(analyser ? analyser.frequencyBinCount : 32);
+        function loop() {
+          animId = requestAnimationFrame(loop);
+
+          // Bounce balance (compute from LFO phase for smooth meters)
+          var speed = parseFloat(els.speed.value);
+          var depth = parseInt(els.depth.value, 10) / 100;
+          var elapsed = ctx.currentTime - lfoStartTime;
+          var phase = 2 * Math.PI * (elapsed / speed);
+          var lVal = 0.5 + 0.5 * depth * Math.sin(phase);
+          var rVal = 0.5 - 0.5 * depth * Math.sin(phase);
+
+          els.meterL.style.width = (lVal * 100).toFixed(1) + "%";
+          els.meterR.style.width = (rVal * 100).toFixed(1) + "%";
+          var sL = 0.85 + lVal * 0.5;
+          var sR = 0.85 + rVal * 0.5;
+          els.orbL.style.transform = "scale(" + sL.toFixed(3) + ")";
+          els.orbR.style.transform = "scale(" + sR.toFixed(3) + ")";
+          els.orbL.style.opacity = (0.5 + lVal * 0.5).toFixed(2);
+          els.orbR.style.opacity = (0.5 + rVal * 0.5).toFixed(2);
+
+          // Bar visualizer
+          if (analyser) {
+            analyser.getByteFrequencyData(freqData);
+            var w = els.viz.clientWidth, h = els.viz.clientHeight;
+            vizCtx.clearRect(0, 0, w, h);
+            var bars = freqData.length;
+            var bw = w / bars;
+            for (var i = 0; i < bars; i++) {
+              var v = freqData[i] / 255;
+              var bh = Math.max(2, v * h);
+              var x = i * bw;
+              var grad = vizCtx.createLinearGradient(0, h, 0, h - bh);
+              grad.addColorStop(0, "rgba(59,130,246,0.9)");
+              grad.addColorStop(0.5, "rgba(168,85,247,0.95)");
+              grad.addColorStop(1, "rgba(236,72,153,1)");
+              vizCtx.fillStyle = grad;
+              vizCtx.fillRect(x + 1, h - bh, bw - 2, bh);
+            }
+          }
+        }
+        loop();
+      }
+
+      function stopVisualLoop() {
+        if (animId) cancelAnimationFrame(animId);
+        animId = null;
+      }
+
+      function resetMeters() {
+        els.meterL.style.width = "0%";
+        els.meterR.style.width = "0%";
+        els.orbL.style.transform = els.orbR.style.transform = "scale(1)";
+        els.orbL.style.opacity = els.orbR.style.opacity = "1";
+        if (vizCtx) vizCtx.clearRect(0, 0, els.viz.width, els.viz.height);
+      }
+
+      /* ---------- Wake Lock ---------- */
+      function requestWakeLock() {
+        if ("wakeLock" in navigator) {
+          navigator.wakeLock.request("screen").then(function (wl) {
+            wakeLock = wl;
+            wakeLock.addEventListener("release", function () {});
+          }).catch(function () {});
+        }
+      }
+      function releaseWakeLock() {
+        if (wakeLock) { try { wakeLock.release(); } catch (e) {} wakeLock = null; }
+      }
+      document.addEventListener("visibilitychange", function () {
+        if (document.visibilityState === "visible" && playing) {
+          requestWakeLock();
+          if (ctx && ctx.state === "suspended") ctx.resume();
+        }
+      });
+
+      /* ---------- Toast ---------- */
+      var toastTimer = null;
+      function toast(msg) {
+        els.toast.textContent = msg;
+        els.toast.classList.add("show");
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(function () { els.toast.classList.remove("show"); }, 2600);
+      }
+
+      /* ---------- Init ---------- */
+      buildSoundGrid();
+      sizeCanvas();
+
+      /* ---------- Service worker ---------- */
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", function () {
+          navigator.serviceWorker.register("./service-worker.js").catch(function () {});
+        });
+      }
+    </script>
+  </body>
+</html>
